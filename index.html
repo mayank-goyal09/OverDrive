@@ -1,0 +1,2467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>OVERDRIVE // Highway Stunt Racing</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <style>
+    /* ==========================================================================
+       DASHBOARD HUD: CLEAN GAMER GREEN (#00ff66) ON TRANSLUCENT GLASS
+       ========================================================================== */
+    :root {
+      --gamer-green: #00ff66;
+      --gamer-dark: #00cc52;
+      --gamer-dim: rgba(0, 255, 102, 0.4);
+      --gamer-subtle: rgba(0, 255, 102, 0.12);
+      --gamer-glow: rgba(0, 255, 102, 0.65);
+      --bg-dark: #070b09;
+      --bg-card: rgba(8, 16, 11, 0.88);
+      --border-card: rgba(0, 255, 102, 0.28);
+      --text-muted: #8aa392;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #081020;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      color: #fff;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    #fx-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.7);
+      transition: background-color 0.25s;
+    }
+
+    #speed-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle, transparent 45%, rgba(0, 255, 102, 0.12) 85%, rgba(255, 255, 255, 0.25) 100%);
+      transition: opacity 0.12s ease-out;
+    }
+
+    /* HUD Telemetry */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 32px;
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .hud-box {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 12px 22px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      pointer-events: auto;
+    }
+
+    .dimension-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      font-size: 13px;
+      text-transform: uppercase;
+      color: var(--gamer-green);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .dimension-badge:hover {
+      border-color: var(--gamer-green);
+      box-shadow: 0 0 25px var(--gamer-dim);
+    }
+
+    .dimension-badge .indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--gamer-green);
+      box-shadow: 0 0 14px var(--gamer-green);
+      animation: pulse 1.4s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(0.85); opacity: 0.75; }
+      to { transform: scale(1.25); opacity: 1; }
+    }
+
+    .score-container {
+      text-align: right;
+    }
+
+    .score-title {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .score-val {
+      font-size: 36px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+      text-shadow: 0 0 16px var(--gamer-glow);
+      line-height: 1;
+      margin-top: 2px;
+    }
+
+    .record-sub {
+      font-size: 11px;
+      color: var(--gamer-green);
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    .multiplier-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--gamer-subtle);
+      border: 1px solid var(--gamer-dim);
+      color: var(--gamer-green);
+      margin-top: 5px;
+    }
+
+    #stunt-banner {
+      position: absolute;
+      top: 110px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.8);
+      opacity: 0;
+      pointer-events: none;
+      font-size: 24px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #fff;
+      text-shadow: 0 0 20px var(--gamer-green);
+      background: linear-gradient(90deg, transparent, var(--gamer-subtle), transparent);
+      padding: 8px 45px;
+      border-top: 2px solid var(--gamer-green);
+      border-bottom: 2px solid var(--gamer-green);
+      transition: all 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    #stunt-banner.show {
+      transform: translateX(-50%) scale(1);
+      opacity: 1;
+    }
+
+    .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      width: 100%;
+    }
+
+    .gauges-left {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 280px;
+    }
+
+    .meter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .meter-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gamer-green);
+    }
+
+    .meter-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .meter-bar-fill {
+      height: 100%;
+      width: 100%;
+      border-radius: 4px;
+      background: var(--gamer-green);
+      box-shadow: 0 0 12px var(--gamer-green);
+      transition: width 0.08s linear;
+    }
+
+    .speedo-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+    }
+
+    .speedo-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 200px;
+      height: 118px;
+      border-radius: 16px 16px 0 0;
+      border-bottom: none;
+    }
+
+    .speed-number {
+      font-size: 60px;
+      font-weight: 900;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -2px;
+      color: #fff;
+      text-shadow: 0 0 18px var(--gamer-glow);
+    }
+
+    .speed-unit {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--gamer-green);
+      letter-spacing: 3px;
+      margin-top: 2px;
+    }
+
+    .gear-box {
+      position: absolute;
+      bottom: 8px;
+      right: 18px;
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--gamer-green);
+    }
+
+    .rpm-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .rpm-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--gamer-green);
+      box-shadow: 0 0 10px var(--gamer-green);
+      transition: width 0.05s linear;
+    }
+
+    .controls-panel {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 280px;
+    }
+
+    .key-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      background: rgba(0, 255, 102, 0.1);
+      border: 1px solid var(--border-card);
+      border-radius: 4px;
+      font-weight: 800;
+      color: var(--gamer-green);
+      margin: 0 2px;
+    }
+
+    .btn-gamer {
+      background: var(--gamer-green);
+      border: none;
+      color: #050806;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      padding: 15px 28px;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 0 24px var(--gamer-glow);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-gamer:hover {
+      transform: scale(1.02);
+      box-shadow: 0 0 35px var(--gamer-green);
+    }
+
+    .btn-hud {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: all 0.2s;
+    }
+
+    .btn-hud:hover {
+      border-color: var(--gamer-green);
+      color: var(--gamer-green);
+    }
+
+    .screen-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 50;
+      background: rgba(4, 8, 6, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      transition: opacity 0.25s ease;
+    }
+
+    .screen-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .game-logo {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .game-logo h1 {
+      font-size: 56px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 6px;
+      color: #fff;
+      text-shadow: 0 0 30px var(--gamer-glow);
+      line-height: 1.1;
+    }
+
+    .game-logo h1 span {
+      color: var(--gamer-green);
+    }
+
+    .game-logo p {
+      font-size: 14px;
+      color: var(--text-muted);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 6px;
+      font-weight: 700;
+    }
+
+    .menu-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 26px;
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    .selector-title {
+      font-size: 11px;
+      letter-spacing: 2px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--gamer-green);
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .option-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .option-card:hover {
+      background: var(--gamer-subtle);
+      border-color: var(--gamer-green);
+      transform: translateY(-2px);
+    }
+
+    .option-card.active {
+      background: var(--gamer-subtle);
+      border-color: var(--gamer-green);
+      box-shadow: 0 0 20px var(--gamer-dim);
+      transform: translateY(-3px);
+    }
+
+    .option-card .car-icon {
+      font-size: 32px;
+      margin-bottom: 6px;
+    }
+
+    .option-card h3 {
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .option-card p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+
+    .stats-bar-mini {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .stats-bar-fill {
+      height: 100%;
+      background: var(--gamer-green);
+    }
+
+    .highscores-bar {
+      display: flex;
+      justify-content: space-around;
+      background: var(--gamer-subtle);
+      border: 1px solid var(--border-card);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--gamer-green);
+    }
+
+    .highscores-bar div span {
+      color: #fff;
+      margin-left: 6px;
+    }
+
+    #touch-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      display: none;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .touch-cluster {
+      display: flex;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    .touch-btn {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 2px solid var(--border-card);
+      color: var(--gamer-green);
+      font-size: 22px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+      touch-action: manipulation;
+    }
+
+    .touch-btn:active {
+      background: var(--gamer-green);
+      color: #000;
+      transform: scale(0.92);
+    }
+
+    @media (max-width: 768px) {
+      .options-grid { grid-template-columns: 1fr; }
+      .game-logo h1 { font-size: 38px; }
+      .speedo-card { width: 150px; height: 95px; }
+      .speed-number { font-size: 44px; }
+      .controls-panel { display: none; }
+      #touch-controls { display: flex; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+  <div id="fx-overlay"></div>
+  <div id="speed-lines"></div>
+
+  <!-- In-Game HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <div id="dim-badge" class="hud-box dimension-badge" title="Click or Press [E] to Shift Reality">
+        <span class="indicator"></span>
+        <span id="dim-name">HIGHWAY RUN</span>
+        <span style="font-size: 10px; opacity: 0.7;">[E]</span>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="btn-fullscreen" class="btn-hud" title="Toggle Fullscreen [F]">⛶ FULLSCREEN</button>
+        <button id="btn-audio" class="btn-hud" title="Toggle Audio [M]">🔊 AUDIO: ON</button>
+        <button id="btn-cam" class="btn-hud" title="Change Camera [C]">📷 CAM [C]</button>
+        <button id="btn-pause" class="btn-hud" title="Pause Game [ESC]">⏸ MENU</button>
+      </div>
+
+      <div class="hud-box score-container">
+        <div class="score-title">SCORE // OVERDRIVE</div>
+        <div id="score-text" class="score-val">0</div>
+        <div id="record-sub" class="record-sub">BEST: <span id="best-score-text">0</span></div>
+        <div id="multiplier-text" class="multiplier-badge">1.0x MULTI</div>
+      </div>
+    </div>
+
+    <div id="stunt-banner">CHRONO DRIFT +500</div>
+
+    <div class="hud-bottom">
+      <div class="gauges-left">
+        <div class="hud-box meter-group">
+          <div class="meter-label">
+            <span>NITRO CHARGE [SHIFT]</span>
+            <span id="nitro-text">100%</span>
+          </div>
+          <div class="meter-bar-bg">
+            <div id="nitro-bar" class="meter-bar-fill"></div>
+          </div>
+        </div>
+
+        <div class="hud-box meter-group">
+          <div class="meter-label">
+            <span>CHRONO SLOW-MO [SPACE]</span>
+            <span id="chrono-text">READY</span>
+          </div>
+          <div class="meter-bar-bg">
+            <div id="chrono-bar" class="meter-bar-fill"></div>
+          </div>
+        </div>
+
+        <div class="hud-box controls-panel">
+          <span class="key-badge">W/S</span> Throttle & Brake<br>
+          <span class="key-badge">A/D</span> Steer & Drift Counter<br>
+          <span class="key-badge">SPACE</span> Chrono Slow-Mo Drift<br>
+          <span class="key-badge">SHIFT</span> Overdrive Nitro Ram<br>
+          <span class="key-badge">E / Q</span> Shift Reality Dimension<br>
+          <span class="key-badge">C</span> Camera Mode &nbsp;|&nbsp; <span class="key-badge">F</span> Fullscreen
+        </div>
+      </div>
+
+      <div class="speedo-wrap">
+        <div class="hud-box speedo-card">
+          <div class="rpm-bar"><div id="rpm-fill" class="rpm-fill"></div></div>
+          <div id="speed-text" class="speed-number">0</div>
+          <div class="speed-unit">MPH</div>
+          <div id="gear-text" class="gear-box">1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Touch Controls -->
+  <div id="touch-controls">
+    <div class="touch-cluster">
+      <button id="touch-left" class="touch-btn">◀</button>
+      <button id="touch-right" class="touch-btn">▶</button>
+    </div>
+    <div class="touch-cluster">
+      <button id="touch-drift" class="touch-btn">⚡</button>
+      <button id="touch-brake" class="touch-btn">▼</button>
+      <button id="touch-gas" class="touch-btn">▲</button>
+      <button id="touch-shift" class="touch-btn">🌀</button>
+    </div>
+  </div>
+
+  <!-- Menu Screen -->
+  <div id="menu-screen" class="screen-overlay">
+    <div class="game-logo">
+      <h1>OVERDRIVE <span>//</span> RACING</h1>
+      <p>Hardcore Stunt Driver // Midnight Highway Edition</p>
+    </div>
+
+    <div class="menu-card">
+      <div class="highscores-bar">
+        <div>Best Score: <span id="menu-best-score">0</span></div>
+        <div>Top Speed: <span id="menu-top-speed">0 MPH</span></div>
+        <div>Best Drift: <span id="menu-best-drift">0 PTS</span></div>
+      </div>
+
+      <div class="selector-title">Select Your Supercar</div>
+      <div class="options-grid">
+        <div class="option-card active" data-car="phantom">
+          <div class="car-icon">🏎️</div>
+          <h3>COBALT GT</h3>
+          <p>Metallic Cobalt Hypercar. Maximum Top Speed & Downforce.</p>
+          <div class="stats-bar-mini"><div class="stats-bar-fill" style="width: 95%;"></div></div>
+        </div>
+        <div class="option-card" data-car="vortex">
+          <div class="car-icon">⚡</div>
+          <h3>CRIMSON DRIFT</h3>
+          <p>Pearl Red Widebody Tuner. Agile Steering & Fast Chrono.</p>
+          <div class="stats-bar-mini"><div class="stats-bar-fill" style="width: 88%;"></div></div>
+        </div>
+        <div class="option-card" data-car="titan">
+          <div class="car-icon">🚜</div>
+          <h3>TITAN BRAWLER</h3>
+          <p>Gunmetal Armored Truck. Smashes obstacles & traffic.</p>
+          <div class="stats-bar-mini"><div class="stats-bar-fill" style="width: 78%;"></div></div>
+        </div>
+      </div>
+
+      <div class="selector-title">Select Track Mode</div>
+      <div class="options-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="option-card active" data-mode="highway">
+          <div class="car-icon">🛣️</div>
+          <h3>MIDNIGHT HIGHWAY</h3>
+          <p>Real textured asphalt, overhead streetlights, civilian traffic & gantries.</p>
+        </div>
+        <div class="option-card" data-mode="stuntpark">
+          <div class="car-icon">🎪</div>
+          <h3>STUNT ARENA</h3>
+          <p>Open playground with mega loops, corkscrews & launch ramps.</p>
+        </div>
+      </div>
+
+      <button id="btn-start-game" class="btn-gamer">
+        <span>IGNITION // START ENGINE</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+
+  <script>
+  /* ==========================================================================
+     OPTIMIZED 60FPS HIGHWAY ENGINE (ZERO GC IN LOOP, FIXED TIMESTEP, RECYCLED CHUNKS)
+     ========================================================================== */
+
+  // Global Reusable Scratch Vectors (Zero Garbage Collection)
+  const _vCamTarget = new THREE.Vector3();
+  const _vLookTarget = new THREE.Vector3();
+  const _vScratch1 = new THREE.Vector3();
+
+  // Frame-rate independent exponential damp function
+  function damp(current, target, lambda, dt) {
+    return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-lambda * dt));
+  }
+
+  // --- PROCEDURAL TEXTURES (GENERATED ONCE AT STARTUP) ---
+  function createAsphaltCanvasTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#181b20';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const noise = (Math.random() - 0.5) * 20;
+      d[i] = Math.min(255, Math.max(0, d[i] + noise));
+      d[i+1] = Math.min(255, Math.max(0, d[i+1] + noise));
+      d[i+2] = Math.min(255, Math.max(0, d[i+2] + noise));
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Solid Yellow Edge Lines
+    ctx.fillStyle = '#ffb300';
+    ctx.fillRect(16, 0, 10, canvas.height);
+    ctx.fillRect(canvas.width - 26, 0, 10, canvas.height);
+
+    // Dashed White Lane Dividers
+    ctx.fillStyle = '#f0f3f6';
+    const dashHeight = 70;
+    const gapHeight = 55;
+    for (let y = 0; y < canvas.height; y += dashHeight + gapHeight) {
+      ctx.fillRect(135, y, 7, dashHeight);
+      ctx.fillRect(252, y, 7, dashHeight);
+      ctx.fillRect(369, y, 7, dashHeight);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1, 3);
+    return tex;
+  }
+
+  function createBuildingCanvasTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#0a0e16';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const cols = 8;
+    const rows = 28;
+    const w = 18;
+    const h = 10;
+    const padX = 14;
+    const padY = 8;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const rand = Math.random();
+        if (rand > 0.65) {
+          ctx.fillStyle = rand > 0.85 ? '#ffe699' : '#ccddff';
+        } else if (rand > 0.5) {
+          ctx.fillStyle = '#445566';
+        } else {
+          ctx.fillStyle = '#101520';
+        }
+        ctx.fillRect(c * (w + padX) + 12, r * (h + padY) + 12, w, h);
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
+  function createHighwayGantryTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#0e5a2b';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#ffffff';
+    ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('METRO SPEEDWAY // EXITS 1-4', canvas.width / 2, 54);
+
+    ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillText('KEEP SPEED // ALL LANES OPEN', canvas.width / 2, 94);
+
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  // --- LOCALSTORAGE RECORDS ---
+  const Records = {
+    get: (key, def = 0) => parseInt(localStorage.getItem('overdrive_' + key) || def, 10),
+    set: (key, val) => localStorage.setItem('overdrive_' + key, val),
+    saveBestScore: (score) => {
+      const best = Records.get('best_score', 0);
+      if (score > best) { Records.set('best_score', Math.floor(score)); return true; }
+      return false;
+    },
+    saveTopSpeed: (mph) => {
+      const top = Records.get('top_speed', 0);
+      if (mph > top) { Records.set('top_speed', Math.floor(mph)); return true; }
+      return false;
+    },
+    saveBestDrift: (driftScore) => {
+      const best = Records.get('best_drift', 0);
+      if (driftScore > best) { Records.set('best_drift', Math.floor(driftScore)); return true; }
+      return false;
+    }
+  };
+
+  // --- AUDIO SYNTHESIZER ---
+  class SoundEngine {
+    constructor() {
+      this.ctx = null;
+      this.enabled = localStorage.getItem('overdrive_audio') !== 'false';
+      this.engineOsc1 = null;
+      this.engineOsc2 = null;
+      this.engineGain = null;
+      this.engineFilter = null;
+      this.screechGain = null;
+      this.screechFilter = null;
+      this.nitroGain = null;
+      this.isMusicPlaying = false;
+      this.synthStep = 0;
+      this.musicTimer = null;
+    }
+
+    init() {
+      if (this.ctx) {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        return;
+      }
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioContext();
+
+      this.compressor = this.ctx.createDynamicsCompressor();
+      this.compressor.threshold.setValueAtTime(-18, this.ctx.currentTime);
+      this.compressor.knee.setValueAtTime(30, this.ctx.currentTime);
+      this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
+      this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+      this.compressor.release.setValueAtTime(0.25, this.ctx.currentTime);
+      this.compressor.connect(this.ctx.destination);
+
+      this.engineOsc1 = this.ctx.createOscillator();
+      this.engineOsc2 = this.ctx.createOscillator();
+      this.engineOsc1.type = 'sawtooth';
+      this.engineOsc2.type = 'triangle';
+
+      this.engineFilter = this.ctx.createBiquadFilter();
+      this.engineFilter.type = 'lowpass';
+      this.engineFilter.frequency.setValueAtTime(400, this.ctx.currentTime);
+      this.engineFilter.Q.setValueAtTime(3.5, this.ctx.currentTime);
+
+      this.engineGain = this.ctx.createGain();
+      this.engineGain.gain.setValueAtTime(this.enabled ? 0.08 : 0, this.ctx.currentTime);
+
+      this.engineOsc1.connect(this.engineFilter);
+      this.engineOsc2.connect(this.engineFilter);
+      this.engineFilter.connect(this.engineGain);
+      this.engineGain.connect(this.compressor);
+
+      this.engineOsc1.start();
+      this.engineOsc2.start();
+
+      const noiseBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < noiseBuffer.length; i++) output[i] = Math.random() * 2 - 1;
+      const whiteNoise = this.ctx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+      whiteNoise.loop = true;
+
+      this.screechFilter = this.ctx.createBiquadFilter();
+      this.screechFilter.type = 'bandpass';
+      this.screechFilter.frequency.setValueAtTime(1400, this.ctx.currentTime);
+      this.screechFilter.Q.setValueAtTime(4.0, this.ctx.currentTime);
+
+      this.screechGain = this.ctx.createGain();
+      this.screechGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+      whiteNoise.connect(this.screechFilter);
+      this.screechFilter.connect(this.screechGain);
+      this.screechGain.connect(this.compressor);
+      whiteNoise.start();
+
+      const nitroNoise = this.ctx.createBufferSource();
+      nitroNoise.buffer = noiseBuffer;
+      nitroNoise.loop = true;
+      const nitroFilter = this.ctx.createBiquadFilter();
+      nitroFilter.type = 'lowpass';
+      nitroFilter.frequency.setValueAtTime(700, this.ctx.currentTime);
+
+      this.nitroGain = this.ctx.createGain();
+      this.nitroGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+      nitroNoise.connect(nitroFilter);
+      nitroFilter.connect(this.nitroGain);
+      this.nitroGain.connect(this.compressor);
+      nitroNoise.start();
+
+      this.startMusic();
+    }
+
+    updateEngine(rpmRatio, throttle, speedRatio, isChrono) {
+      if (!this.ctx || !this.enabled) return;
+      const timeDilation = isChrono ? 0.45 : 1.0;
+      const baseFreq = 36 + rpmRatio * 190 * timeDilation;
+      const t = this.ctx.currentTime;
+
+      this.engineOsc1.frequency.setTargetAtTime(baseFreq, t, 0.05);
+      this.engineOsc2.frequency.setTargetAtTime(baseFreq * 0.5, t, 0.05);
+      this.engineFilter.frequency.setTargetAtTime(300 + rpmRatio * 1700 * timeDilation, t, 0.05);
+      this.engineGain.gain.setTargetAtTime(0.04 + throttle * 0.08 + speedRatio * 0.04, t, 0.05);
+    }
+
+    setDriftScreech(slipIntensity) {
+      if (!this.ctx || !this.enabled) return;
+      const t = this.ctx.currentTime;
+      const vol = Math.min(slipIntensity * 0.25, 0.3);
+      this.screechGain.gain.setTargetAtTime(vol, t, 0.04);
+      this.screechFilter.frequency.setTargetAtTime(1000 + slipIntensity * 800, t, 0.05);
+    }
+
+    setNitro(active) {
+      if (!this.ctx || !this.enabled) return;
+      this.nitroGain.gain.setTargetAtTime(active ? 0.32 : 0, this.ctx.currentTime, 0.08);
+    }
+
+    playDimensionShift() {
+      if (!this.ctx || !this.enabled) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      const t = this.ctx.currentTime;
+      osc.frequency.setValueAtTime(200, t);
+      osc.frequency.exponentialRampToValueAtTime(1200, t + 0.15);
+      osc.frequency.exponentialRampToValueAtTime(150, t + 0.4);
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      osc.connect(gain);
+      gain.connect(this.compressor);
+      osc.start(t);
+      osc.stop(t + 0.42);
+    }
+
+    playImpact() {
+      if (!this.ctx || !this.enabled) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      const t = this.ctx.currentTime;
+      osc.frequency.setValueAtTime(160, t);
+      osc.frequency.exponentialRampToValueAtTime(30, t + 0.25);
+      gain.gain.setValueAtTime(0.4, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+      osc.connect(gain);
+      gain.connect(this.compressor);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    }
+
+    playJump() {
+      if (!this.ctx || !this.enabled) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      const t = this.ctx.currentTime;
+      osc.frequency.setValueAtTime(180, t);
+      osc.frequency.exponentialRampToValueAtTime(600, t + 0.2);
+      gain.gain.setValueAtTime(0.25, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.connect(gain);
+      gain.connect(this.compressor);
+      osc.start(t);
+      osc.stop(t + 0.26);
+    }
+
+    startMusic() {
+      if (this.isMusicPlaying) return;
+      this.isMusicPlaying = true;
+      const tempo = 126;
+      const stepDuration = 60 / tempo / 4;
+
+      const bassProg = [
+        36, 36, 48, 36,  36, 36, 48, 36,  41, 41, 53, 41,  41, 41, 53, 41,
+        43, 43, 55, 43,  43, 43, 55, 43,  34, 34, 46, 34,  34, 34, 46, 34
+      ];
+
+      const stepClock = () => {
+        if (!this.enabled || !this.ctx) return;
+        const t = this.ctx.currentTime;
+        const midi = bassProg[this.synthStep % bassProg.length];
+        const freq = 440 * Math.pow(2, (midi - 69) / 12);
+
+        const bOsc = this.ctx.createOscillator();
+        const bGain = this.ctx.createGain();
+        const bFilt = this.ctx.createBiquadFilter();
+        bOsc.type = 'sawtooth';
+        bOsc.frequency.setValueAtTime(freq, t);
+        bFilt.type = 'lowpass';
+        bFilt.frequency.setValueAtTime(850, t);
+        bFilt.frequency.exponentialRampToValueAtTime(140, t + stepDuration * 0.9);
+        bGain.gain.setValueAtTime(0.048, t);
+        bGain.gain.exponentialRampToValueAtTime(0.001, t + stepDuration * 0.95);
+        bOsc.connect(bFilt);
+        bFilt.connect(bGain);
+        bGain.connect(this.compressor);
+        bOsc.start(t);
+        bOsc.stop(t + stepDuration);
+
+        if (this.synthStep % 8 === 0 || this.synthStep % 8 === 4) {
+          const kOsc = this.ctx.createOscillator();
+          const kGain = this.ctx.createGain();
+          kOsc.type = 'sine';
+          kOsc.frequency.setValueAtTime(140, t);
+          kOsc.frequency.exponentialRampToValueAtTime(36, t + 0.12);
+          kGain.gain.setValueAtTime(0.22, t);
+          kGain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+          kOsc.connect(kGain);
+          kGain.connect(this.compressor);
+          kOsc.start(t);
+          kOsc.stop(t + 0.15);
+        }
+
+        if (this.synthStep % 8 === 4) {
+          const sOsc = this.ctx.createOscillator();
+          const sGain = this.ctx.createGain();
+          sOsc.type = 'triangle';
+          sOsc.frequency.setValueAtTime(220, t);
+          sGain.gain.setValueAtTime(0.12, t);
+          sGain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+          sOsc.connect(sGain);
+          sGain.connect(this.compressor);
+          sOsc.start(t);
+          sOsc.stop(t + 0.16);
+        }
+
+        this.synthStep++;
+      };
+
+      this.musicTimer = setInterval(stepClock, stepDuration * 1000);
+    }
+
+    toggleAudio() {
+      this.enabled = !this.enabled;
+      localStorage.setItem('overdrive_audio', this.enabled ? 'true' : 'false');
+      if (this.engineGain) {
+        this.engineGain.gain.setValueAtTime(this.enabled ? 0.08 : 0, this.ctx.currentTime);
+      }
+      return this.enabled;
+    }
+  }
+
+  // --- CAR 3D MESH BUILDER ---
+  function createCarMesh(type) {
+    const carGroup = new THREE.Group();
+
+    let bodyColor = 0x0f3e7a;
+    let chassisWidth = 2.1;
+    let chassisLength = 4.5;
+    let chassisHeight = 0.85;
+
+    if (type === 'vortex') {
+      bodyColor = 0x8c121e;
+      chassisWidth = 2.25;
+      chassisLength = 4.4;
+      chassisHeight = 0.78;
+    } else if (type === 'titan') {
+      bodyColor = 0x222830;
+      chassisWidth = 2.45;
+      chassisLength = 4.9;
+      chassisHeight = 1.15;
+    }
+
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: bodyColor,
+      metalness: 0.88,
+      roughness: 0.18
+    });
+
+    const carbonMat = new THREE.MeshStandardMaterial({
+      color: 0x14181a,
+      metalness: 0.4,
+      roughness: 0.55
+    });
+
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x111c24,
+      metalness: 0.9,
+      roughness: 0.12,
+      transparent: true,
+      opacity: 0.72
+    });
+
+    const mainBody = new THREE.Mesh(new THREE.BoxGeometry(chassisWidth, chassisHeight * 0.55, chassisLength), bodyMat);
+    mainBody.position.y = 0.45;
+    carGroup.add(mainBody);
+
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(chassisWidth * 0.74, chassisHeight * 0.52, chassisLength * 0.48), glassMat);
+    cabin.position.set(0, 0.45 + chassisHeight * 0.48, -0.18);
+    carGroup.add(cabin);
+
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(chassisWidth * 0.88, 0.12, chassisLength * 0.36), bodyMat);
+    hood.position.set(0, 0.50, 1.35);
+    hood.rotation.x = 0.1;
+    carGroup.add(hood);
+
+    const splitter = new THREE.Mesh(new THREE.BoxGeometry(chassisWidth * 0.95, 0.08, 0.35), carbonMat);
+    splitter.position.set(0, 0.22, chassisLength * 0.5 + 0.1);
+    carGroup.add(splitter);
+
+    const headlightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const leftHeadlight = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.14, 0.1), headlightMat);
+    leftHeadlight.position.set(-chassisWidth * 0.38, 0.44, chassisLength * 0.5);
+    const rightHeadlight = leftHeadlight.clone();
+    rightHeadlight.position.x = chassisWidth * 0.38;
+    carGroup.add(leftHeadlight, rightHeadlight);
+
+    // Single Forward High-Beam Spotlight
+    const headlampSpot = new THREE.SpotLight(0xffeedd, 3.2, 70, Math.PI / 4.5, 0.35);
+    headlampSpot.position.set(0, 0.65, chassisLength * 0.5);
+    headlampSpot.target.position.set(0, 0, chassisLength * 0.5 + 40);
+    carGroup.add(headlampSpot, headlampSpot.target);
+
+    // Taillights
+    const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xcc0015 });
+    const tailLights = new THREE.Mesh(new THREE.BoxGeometry(chassisWidth * 0.85, 0.12, 0.1), tailLightMat);
+    tailLights.position.set(0, 0.5, -chassisLength * 0.5);
+    carGroup.add(tailLights);
+    carGroup.tailLights = tailLights;
+
+    // Spoiler
+    const wingStrutL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.38, 0.15), carbonMat);
+    wingStrutL.position.set(-chassisWidth * 0.34, 0.8, -chassisLength * 0.42);
+    const wingStrutR = wingStrutL.clone();
+    wingStrutR.position.x = chassisWidth * 0.34;
+    const wingBlade = new THREE.Mesh(new THREE.BoxGeometry(chassisWidth * 1.05, 0.08, 0.45), carbonMat);
+    wingBlade.position.set(0, 0.98, -chassisLength * 0.44);
+    wingBlade.rotation.x = -0.08;
+    carGroup.add(wingStrutL, wingStrutR, wingBlade);
+
+    // Chrome Exhausts
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xddeeff, metalness: 0.95, roughness: 0.1 });
+    const exhaustGeo = new THREE.CylinderGeometry(0.08, 0.10, 0.28, 12).rotateX(Math.PI / 2);
+    const exhaustL = new THREE.Mesh(exhaustGeo, chromeMat);
+    exhaustL.position.set(-0.38, 0.32, -chassisLength * 0.5);
+    const exhaustR = exhaustL.clone();
+    exhaustR.position.x = 0.38;
+    carGroup.add(exhaustL, exhaustR);
+
+    // Steering Wheel
+    const steerWheel = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 8, 20), new THREE.MeshBasicMaterial({ color: 0x00ff66, wireframe: true }));
+    steerWheel.position.set(-0.35, 0.65, 0.15);
+    steerWheel.rotation.x = 0.3;
+    carGroup.add(steerWheel);
+    carGroup.steerWheel = steerWheel;
+
+    // 4 Wheels
+    const wheels = [];
+    const wheelRadius = 0.42;
+    const wheelWidth = 0.32;
+    const wheelGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 18).rotateZ(Math.PI / 2);
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x16181a, roughness: 0.85 });
+    const alloyRimMat = new THREE.MeshStandardMaterial({ color: 0xe0e6ed, metalness: 0.92, roughness: 0.15 });
+
+    const wheelOffsets = [
+      { x: -chassisWidth * 0.52, z: chassisLength * 0.32, isFront: true },
+      { x: chassisWidth * 0.52, z: chassisLength * 0.32, isFront: true },
+      { x: -chassisWidth * 0.52, z: -chassisLength * 0.32, isFront: false },
+      { x: chassisWidth * 0.52, z: -chassisLength * 0.32, isFront: false }
+    ];
+
+    wheelOffsets.forEach(pos => {
+      const wheelHolder = new THREE.Group();
+      wheelHolder.position.set(pos.x, wheelRadius, pos.z);
+
+      const tire = new THREE.Mesh(wheelGeo, tireMat);
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(wheelRadius * 0.68, wheelRadius * 0.68, wheelWidth * 1.05, 10).rotateZ(Math.PI / 2), alloyRimMat);
+      wheelHolder.add(tire, rim);
+      wheelHolder.isFront = pos.isFront;
+      wheels.push(wheelHolder);
+      carGroup.add(wheelHolder);
+    });
+    carGroup.wheels = wheels;
+
+    return carGroup;
+  }
+
+  // --- CIVILIAN TRAFFIC VEHICLE BUILDER ---
+  function createTrafficCarMesh(colorHex) {
+    const carGroup = new THREE.Group();
+    const w = 2.0;
+    const l = 4.2;
+    const h = 0.95;
+
+    const paintMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.8, roughness: 0.25 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x111820, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.75 });
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x16181a, roughness: 0.85 });
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w, h * 0.55, l), paintMat);
+    body.position.y = 0.45;
+    carGroup.add(body);
+
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(w * 0.78, h * 0.52, l * 0.52), glassMat);
+    cabin.position.set(0, 0.45 + h * 0.5, -0.1);
+    carGroup.add(cabin);
+
+    const hlMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const hlL = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.1), hlMat);
+    hlL.position.set(-w * 0.35, 0.42, l * 0.5);
+    const hlR = hlL.clone();
+    hlR.position.x = w * 0.35;
+    carGroup.add(hlL, hlR);
+
+    const tlMat = new THREE.MeshBasicMaterial({ color: 0xdd1122 });
+    const tlL = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.1), tlMat);
+    tlL.position.set(-w * 0.35, 0.45, -l * 0.5);
+    const tlR = tlL.clone();
+    tlR.position.x = w * 0.35;
+    carGroup.add(tlL, tlR);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 12).rotateZ(Math.PI / 2);
+    [
+      { x: -w * 0.52, z: l * 0.3 }, { x: w * 0.52, z: l * 0.3 },
+      { x: -w * 0.52, z: -l * 0.3 }, { x: w * 0.52, z: -l * 0.3 }
+    ].forEach(p => {
+      const wh = new THREE.Mesh(wheelGeo, tireMat);
+      wh.position.set(p.x, 0.38, p.z);
+      carGroup.add(wh);
+    });
+
+    return carGroup;
+  }
+
+  // --- HIGHWAY HAZARD & OBSTACLE BUILDERS ---
+  function createSafetyBarrelsMesh() {
+    const group = new THREE.Group();
+    const barrelGeo = new THREE.CylinderGeometry(0.42, 0.46, 1.1, 12);
+    const orangeMat = new THREE.MeshStandardMaterial({ color: 0xff5500, roughness: 0.45, metalness: 0.1 });
+    const whiteStripeMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.3 });
+    const stripeGeo = new THREE.CylinderGeometry(0.44, 0.44, 0.3, 12);
+    const beaconGeo = new THREE.SphereGeometry(0.12, 8, 8);
+    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+
+    const offsets = [
+      { x: -0.65, z: 0 },
+      { x: 0.65, z: 0 },
+      { x: 0, z: 0.7 }
+    ];
+
+    offsets.forEach(pos => {
+      const barrel = new THREE.Mesh(barrelGeo, orangeMat);
+      barrel.position.set(pos.x, 0.55, pos.z);
+      const stripe = new THREE.Mesh(stripeGeo, whiteStripeMat);
+      stripe.position.set(0, 0, 0);
+      barrel.add(stripe);
+
+      const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+      beacon.position.set(0, 0.65, 0);
+      barrel.add(beacon);
+
+      group.add(barrel);
+    });
+
+    return group;
+  }
+
+  function createJumpRampMesh() {
+    const rampGroup = new THREE.Group();
+    const rampGeo = new THREE.BoxGeometry(4.2, 1.4, 6.5);
+    rampGeo.rotateX(0.22);
+    const rampMat = new THREE.MeshStandardMaterial({ color: 0xffbb00, roughness: 0.35, metalness: 0.3 });
+    const rampMesh = new THREE.Mesh(rampGeo, rampMat);
+    rampMesh.position.set(0, 0.65, 0);
+    rampGroup.add(rampMesh);
+
+    const railMat = new THREE.MeshBasicMaterial({ color: 0x00ff66 });
+    const railGeo = new THREE.BoxGeometry(0.18, 0.2, 6.6);
+    const railL = new THREE.Mesh(railGeo, railMat);
+    railL.position.set(-2.05, 0.75, 0);
+    railL.rotation.x = 0.22;
+    const railR = railL.clone();
+    railR.position.x = 2.05;
+    rampGroup.add(railL, railR);
+
+    return rampGroup;
+  }
+
+  function createNitroPickupMesh() {
+    const pickupGroup = new THREE.Group();
+    const crystalGeo = new THREE.OctahedronGeometry(0.7, 0);
+    const crystalMat = new THREE.MeshStandardMaterial({
+      color: 0x00ffcc,
+      emissive: 0x00bb88,
+      roughness: 0.2,
+      metalness: 0.8
+    });
+    const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+    crystal.position.y = 0;
+    pickupGroup.add(crystal);
+    pickupGroup.crystal = crystal;
+
+    const ringGeo = new THREE.TorusGeometry(1.05, 0.05, 8, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff66, wireframe: true });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    pickupGroup.add(ring);
+    pickupGroup.ring = ring;
+
+    return pickupGroup;
+  }
+
+  // --- HIGH-PERFORMANCE PARTICLE SYSTEM ---
+  class ParticlePool {
+    constructor(scene, count = 300) {
+      this.count = count;
+      this.geo = new THREE.BufferGeometry();
+      this.positions = new Float32Array(count * 3);
+      this.colors = new Float32Array(count * 3);
+      this.velocitiesX = new Float32Array(count);
+      this.velocitiesY = new Float32Array(count);
+      this.velocitiesZ = new Float32Array(count);
+      this.lifes = new Float32Array(count);
+
+      for (let i = 0; i < count; i++) {
+        this.positions[i * 3 + 1] = -100;
+        this.lifes[i] = 0;
+      }
+
+      this.geo.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
+      this.geo.setAttribute('color', new THREE.BufferAttribute(this.colors, 3));
+
+      const pMat = new THREE.PointsMaterial({
+        size: 0.45,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.85
+      });
+
+      this.points = new THREE.Points(this.geo, pMat);
+      scene.add(this.points);
+      this.nextIdx = 0;
+    }
+
+    spawn(x, y, z, vx, vy, vz, r, g, b, life = 0.55) {
+      const idx = this.nextIdx;
+      this.nextIdx = (this.nextIdx + 1) % this.count;
+
+      this.positions[idx * 3] = x;
+      this.positions[idx * 3 + 1] = y;
+      this.positions[idx * 3 + 2] = z;
+
+      this.velocitiesX[idx] = vx;
+      this.velocitiesY[idx] = vy;
+      this.velocitiesZ[idx] = vz;
+
+      this.colors[idx * 3] = r;
+      this.colors[idx * 3 + 1] = g;
+      this.colors[idx * 3 + 2] = b;
+
+      this.lifes[idx] = life;
+    }
+
+    update(delta) {
+      const pos = this.positions;
+      for (let i = 0; i < this.count; i++) {
+        if (this.lifes[i] > 0) {
+          this.lifes[i] -= delta;
+          pos[i * 3] += this.velocitiesX[i] * delta;
+          pos[i * 3 + 1] += this.velocitiesY[i] * delta;
+          pos[i * 3 + 2] += this.velocitiesZ[i] * delta;
+          if (this.lifes[i] <= 0) {
+            pos[i * 3 + 1] = -100;
+          }
+        }
+      }
+      this.geo.attributes.position.needsUpdate = true;
+      this.geo.attributes.color.needsUpdate = true;
+    }
+  }
+
+  // --- GAME MAIN CONTROLLER ---
+  class Game {
+    constructor() {
+      this.sound = new SoundEngine();
+      this.container = document.getElementById('canvas-container');
+
+      this.gameState = 'menu';
+      this.gameMode = 'highway';
+      this.activeCarType = 'phantom';
+      this.score = 0;
+      this.comboMultiplier = 1.0;
+      this.nitro = 100.0;
+      this.chrono = 100.0;
+      this.timeDilation = 1.0;
+      this.cameraMode = 0;
+
+      // Inputs
+      this.keys = {
+        forward: false, backward: false, left: false, right: false,
+        drift: false, nitro: false
+      };
+
+      // Car Dynamics (Interpolated Smoothly)
+      this.speed = 0;
+      this.targetSpeed = 0;
+      this.steerAngle = 0;
+      this.targetSteer = 0;
+      this.driftAngle = 0;
+      this.driftScoreAccum = 0;
+      this.rpm = 800;
+      this.gear = 1;
+
+      // Air Physics
+      this.isAirborne = false;
+      this.airVelocityY = 0;
+      this.airRoll = 0;
+      this.airPitch = 0;
+
+      // Shared Pre-rendered Textures
+      this.asphaltTexture = createAsphaltCanvasTexture();
+      this.buildingTexture = createBuildingCanvasTexture();
+      this.gantryTexture = createHighwayGantryTexture();
+
+      // World Entities
+      this.trackChunks = [];
+      this.trafficDrones = [];
+      this.pickups = [];
+      this.obstacles = [];
+      this.jumpPads = [];
+      this.stuntProps = [];
+
+      // Pre-created Shared Materials (Zero GC)
+      this.roadMat = new THREE.MeshStandardMaterial({ map: this.asphaltTexture, roughness: 0.38, metalness: 0.15 });
+      this.guardrailMat = new THREE.MeshStandardMaterial({ color: 0x889aa8, metalness: 0.85, roughness: 0.25 });
+      this.lampPostMat = new THREE.MeshStandardMaterial({ color: 0x445566, metalness: 0.8, roughness: 0.3 });
+      this.lampHeadMat = new THREE.MeshBasicMaterial({ color: 0xfffae6 });
+
+      this.initThree();
+      this.initWorld();
+      this.initInputs();
+      this.initUI();
+      this.loadRecords();
+
+      // Fixed Timestep Engine Timing
+      this.lastTime = performance.now();
+      this.lag = 0;
+      this.FIXED_STEP = 1 / 60; // Deterministic 60Hz Physics
+
+      window.addEventListener('resize', () => this.onResize());
+      this.animate();
+    }
+
+    loadRecords() {
+      const bestScore = Records.get('best_score', 0);
+      const topSpeed = Records.get('top_speed', 0);
+      const bestDrift = Records.get('best_drift', 0);
+
+      document.getElementById('best-score-text').innerText = bestScore;
+      document.getElementById('menu-best-score').innerText = bestScore;
+      document.getElementById('menu-top-speed').innerText = topSpeed + ' MPH';
+      document.getElementById('menu-best-drift').innerText = bestDrift + ' PTS';
+    }
+
+    initThree() {
+      this.scene = new THREE.Scene();
+      this.scene.fog = new THREE.FogExp2(0x0c1424, 0.0055);
+      this.scene.background = new THREE.Color(0x0a101f);
+
+      this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1200);
+      this.camera.position.set(0, 4.5, -9);
+
+      this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      this.container.appendChild(this.renderer.domElement);
+
+      // Unified Global Lighting (Optimized for 60+ FPS)
+      const hemiLight = new THREE.HemisphereLight(0x4466aa, 0x111622, 1.35);
+      this.scene.add(hemiLight);
+
+      this.moonLight = new THREE.DirectionalLight(0x99bbff, 1.45);
+      this.moonLight.position.set(50, 100, 80);
+      this.scene.add(this.moonLight);
+
+      this.particles = new ParticlePool(this.scene, 300);
+    }
+
+    initWorld() {
+      // Starfield
+      const starGeo = new THREE.BufferGeometry();
+      const starCount = 800;
+      const starPos = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount * 3; i += 3) {
+        starPos[i] = (Math.random() - 0.5) * 1200;
+        starPos[i+1] = 60 + Math.random() * 400;
+        starPos[i+2] = (Math.random() - 0.5) * 1200;
+      }
+      starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+      const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, transparent: true, opacity: 0.8 });
+      const starField = new THREE.Points(starGeo, starMat);
+      this.scene.add(starField);
+      this.starField = starField;
+
+      // Distant City Skyline
+      const cityGroup = new THREE.Group();
+      const bldgMat = new THREE.MeshStandardMaterial({
+        map: this.buildingTexture,
+        roughness: 0.6,
+        metalness: 0.3
+      });
+
+      for (let i = -16; i <= 16; i++) {
+        if (Math.abs(i) < 2) continue;
+        const bH = 40 + Math.random() * 95;
+        const bW = 16 + Math.random() * 24;
+        const bGeo = new THREE.BoxGeometry(bW, bH, bW);
+        const building = new THREE.Mesh(bGeo, bldgMat);
+        building.position.set(i * 28 + (Math.random() - 0.5) * 12, bH * 0.5, 260 + Math.random() * 220);
+        cityGroup.add(building);
+
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.8, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff1122 }));
+        beacon.position.set(building.position.x, bH + 1, building.position.z);
+        cityGroup.add(beacon);
+      }
+      this.scene.add(cityGroup);
+
+      // Ground Terrain
+      const terrain = new THREE.Mesh(
+        new THREE.PlaneGeometry(1200, 1200).rotateX(-Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0x070d18, roughness: 0.9 })
+      );
+      terrain.position.y = -0.15;
+      this.scene.add(terrain);
+      this.terrain = terrain;
+
+      // Player Car
+      this.car = createCarMesh(this.activeCarType);
+      this.car.position.set(0, 0, 0);
+      this.scene.add(this.car);
+
+      this.buildTrack();
+    }
+
+    buildTrack() {
+      this.trackChunks.forEach(c => this.scene.remove(c));
+      this.trackChunks = [];
+      this.trafficDrones.forEach(d => this.scene.remove(d.mesh));
+      this.trafficDrones = [];
+      this.obstacles.forEach(o => { if (!o.chunk) this.scene.remove(o.mesh); });
+      this.obstacles = [];
+      this.pickups.forEach(p => { if (!p.chunk) this.scene.remove(p.mesh); });
+      this.pickups = [];
+      this.jumpPads.forEach(j => { if (!j.chunk) this.scene.remove(j.mesh); });
+      this.jumpPads = [];
+      this.stuntProps.forEach(s => this.scene.remove(s));
+      this.stuntProps = [];
+
+      if (this.gameMode === 'highway') {
+        // Pre-allocate 14 track chunks in an Object Pool / Ring Buffer
+        for (let i = 0; i < 14; i++) {
+          this.createHighwayChunk(i * 60, i);
+        }
+
+        // Spawn continuous civilian traffic ahead of the player across 4 highway lanes
+        const lanes = [-8, -2.8, 2.8, 8];
+        const civilianColors = [0xf0f0f0, 0x778899, 0x16181b, 0x18325a, 0x8c121e, 0xd4a017];
+        for (let i = 0; i < 12; i++) {
+          const color = civilianColors[i % civilianColors.length];
+          const carMesh = createTrafficCarMesh(color);
+          const lane = lanes[i % lanes.length];
+          const z = 42 + i * 52 + (Math.random() - 0.5) * 15;
+          carMesh.position.set(lane, 0, z);
+          this.scene.add(carMesh);
+          this.trafficDrones.push({
+            mesh: carMesh,
+            speed: 18 + Math.random() * 12,
+            lane: lane
+          });
+        }
+      } else {
+        this.buildStuntArena();
+      }
+    }
+
+    createHighwayChunk(zPos, chunkIndex = 0) {
+      const chunk = new THREE.Group();
+      chunk.position.z = zPos;
+      const length = 60;
+      const roadWidth = 26;
+
+      // Asphalt Surface (Reusing shared material)
+      const road = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, length).rotateX(-Math.PI / 2), this.roadMat);
+      road.position.set(0, 0, length / 2);
+      chunk.add(road);
+
+      // Guardrails
+      const grGeo = new THREE.BoxGeometry(0.4, 0.7, length);
+      const leftGR = new THREE.Mesh(grGeo, this.guardrailMat);
+      leftGR.position.set(-roadWidth * 0.5, 0.45, length / 2);
+      const rightGR = leftGR.clone();
+      rightGR.position.x = roadWidth * 0.5;
+      chunk.add(leftGR, rightGR);
+
+      // Street Lamp Posts (Emissive glow without GPU-choking spot lights)
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 8.5, 10), this.lampPostMat);
+      pole.position.set(roadWidth * 0.5 + 1.8, 4.25, length * 0.5);
+
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.15, 0.15), this.lampPostMat);
+      arm.position.set(roadWidth * 0.5 - 0.2, 8.4, length * 0.5);
+
+      const lampHead = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 0.6), this.lampHeadMat);
+      lampHead.position.set(roadWidth * 0.5 - 2.0, 8.3, length * 0.5);
+
+      chunk.add(pole, arm, lampHead);
+
+      // Overhead Gantry Sign
+      if (Math.random() > 0.6) {
+        const gantry = this.createHighwayGantry(length * 0.5, roadWidth);
+        chunk.add(gantry);
+      }
+
+      // 1. Safety Construction Barrels (Hazard Obstacle)
+      if (chunkIndex % 3 === 1) {
+        const barrelLane = chunkIndex % 2 === 0 ? 2.8 : -2.8;
+        const barrels = createSafetyBarrelsMesh();
+        barrels.position.set(barrelLane, 0, length * 0.5);
+        chunk.add(barrels);
+        this.obstacles.push({
+          mesh: barrels,
+          chunk: chunk,
+          initialY: 0,
+          active: true
+        });
+      }
+
+      // 2. Stunt Jump Ramps
+      if (chunkIndex % 4 === 2) {
+        const rampLane = chunkIndex % 2 === 0 ? 8 : -8;
+        const ramp = createJumpRampMesh();
+        ramp.position.set(rampLane, 0, length * 0.5);
+        chunk.add(ramp);
+        this.jumpPads.push({
+          mesh: ramp,
+          chunk: chunk,
+          lane: rampLane
+        });
+      }
+
+      // 3. Glowing Nitro Refill Crystals
+      if (chunkIndex % 2 === 0) {
+        const pickupLanes = [-8, -2.8, 2.8, 8];
+        const pickupLane = pickupLanes[(chunkIndex * 2 + 1) % pickupLanes.length];
+        const pickup = createNitroPickupMesh();
+        pickup.position.set(pickupLane, 1.1, length * 0.5);
+        chunk.add(pickup);
+        this.pickups.push({
+          mesh: pickup,
+          chunk: chunk,
+          initialY: 1.1,
+          active: true
+        });
+      }
+
+      this.scene.add(chunk);
+      this.trackChunks.push(chunk);
+    }
+
+    createHighwayGantry(zOffset, width) {
+      const gantryGroup = new THREE.Group();
+      gantryGroup.position.set(0, 0, zOffset);
+
+      const trussL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 9.5, 10), this.lampPostMat);
+      trussL.position.set(-width * 0.5 - 0.5, 4.75, 0);
+      const trussR = trussL.clone();
+      trussR.position.x = width * 0.5 + 0.5;
+
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(width + 2, 0.5, 0.5), this.lampPostMat);
+      beam.position.set(0, 9.2, 0);
+
+      const signMat = new THREE.MeshBasicMaterial({ map: this.gantryTexture });
+      const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(16, 4), signMat);
+      signMesh.position.set(0, 7.8, 0.28);
+
+      gantryGroup.add(trussL, trussR, beam, signMesh);
+      return gantryGroup;
+    }
+
+    buildStuntArena() {
+      const arenaSize = 380;
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(arenaSize, arenaSize).rotateX(-Math.PI / 2),
+        this.roadMat
+      );
+      this.scene.add(floor);
+      this.stuntProps.push(floor);
+
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0x778899, roughness: 0.8 });
+      const w1 = new THREE.Mesh(new THREE.BoxGeometry(arenaSize, 8, 2), wallMat);
+      w1.position.set(0, 4, arenaSize * 0.5);
+      const w2 = w1.clone();
+      w2.position.z = -arenaSize * 0.5;
+      const w3 = new THREE.Mesh(new THREE.BoxGeometry(2, 8, arenaSize), wallMat);
+      w3.position.set(arenaSize * 0.5, 4, 0);
+      const w4 = w3.clone();
+      w4.position.x = -arenaSize * 0.5;
+      this.scene.add(w1, w2, w3, w4);
+      this.stuntProps.push(w1, w2, w3, w4);
+
+      const rampGeo = new THREE.BoxGeometry(22, 6.5, 28);
+      rampGeo.rotateX(0.28);
+      const ramp1 = new THREE.Mesh(rampGeo, new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.4 }));
+      ramp1.position.set(0, 1.6, 50);
+      this.scene.add(ramp1);
+      this.stuntProps.push(ramp1);
+      this.jumpPads.push({ mesh: ramp1, size: { x: 22, z: 28 } });
+
+      const loop = new THREE.Mesh(
+        new THREE.TorusGeometry(19, 3.8, 16, 48, Math.PI * 1.8),
+        new THREE.MeshStandardMaterial({ color: 0x00ff66, metalness: 0.8, roughness: 0.25 })
+      );
+      loop.position.set(70, 19, 75);
+      loop.rotation.y = Math.PI / 2;
+      this.scene.add(loop);
+      this.stuntProps.push(loop);
+
+      for (let b = 0; b < 8; b++) {
+        const bumper = new THREE.Mesh(
+          new THREE.CylinderGeometry(4.5, 4.5, 3.5, 20),
+          new THREE.MeshStandardMaterial({ color: 0xff3344, metalness: 0.5, roughness: 0.3 })
+        );
+        const bx = (Math.random() - 0.5) * 200;
+        const bz = (Math.random() - 0.5) * 200;
+        bumper.position.set(bx, 1.75, bz);
+        this.scene.add(bumper);
+        this.stuntProps.push(bumper);
+      }
+    }
+
+    triggerBanner(text) {
+      const banner = document.getElementById('stunt-banner');
+      banner.innerText = text;
+      banner.classList.add('show');
+      clearTimeout(this.bannerTimer);
+      this.bannerTimer = setTimeout(() => { banner.classList.remove('show'); }, 1500);
+    }
+
+    initInputs() {
+      const keyMap = {
+        'KeyW': 'forward', 'ArrowUp': 'forward',
+        'KeyS': 'backward', 'ArrowDown': 'backward',
+        'KeyA': 'left', 'ArrowLeft': 'left',
+        'KeyD': 'right', 'ArrowRight': 'right',
+        'Space': 'drift',
+        'ShiftLeft': 'nitro', 'ShiftRight': 'nitro'
+      };
+
+      window.addEventListener('keydown', (e) => {
+        if (this.sound && this.sound.ctx && this.sound.ctx.state === 'suspended') {
+          this.sound.ctx.resume();
+        }
+
+        if (keyMap[e.code]) {
+          this.keys[keyMap[e.code]] = true;
+          e.preventDefault();
+        }
+        if (e.code === 'KeyE' || e.code === 'KeyQ') this.shiftDimension();
+        if (e.code === 'KeyC') this.cycleCamera();
+        if (e.code === 'KeyF') this.toggleFullscreen();
+        if (e.code === 'KeyR') this.resetCar();
+        if (e.code === 'KeyM') this.toggleAudio();
+        if (e.code === 'Escape') this.togglePause();
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (keyMap[e.code]) this.keys[keyMap[e.code]] = false;
+      });
+
+      const bindTouch = (id, keyName) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); this.keys[keyName] = true; });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); this.keys[keyName] = false; });
+        btn.addEventListener('mousedown', () => { this.keys[keyName] = true; });
+        btn.addEventListener('mouseup', () => { this.keys[keyName] = false; });
+      };
+
+      bindTouch('touch-gas', 'forward');
+      bindTouch('touch-brake', 'backward');
+      bindTouch('touch-left', 'left');
+      bindTouch('touch-right', 'right');
+      bindTouch('touch-drift', 'drift');
+      bindTouch('touch-shift', 'nitro');
+
+      const btnShiftTouch = document.getElementById('dim-badge');
+      if (btnShiftTouch) {
+        btnShiftTouch.addEventListener('click', () => this.shiftDimension());
+      }
+    }
+
+    shiftDimension() {
+      this.sound.playDimensionShift();
+      this.triggerBanner('OVERCLOCK BOOST ACTIVATED!');
+    }
+
+    cycleCamera() {
+      this.cameraMode = (this.cameraMode + 1) % 4;
+      const camNames = ['CHASE CAM', 'LOW DRIFT CAM', 'COCKPIT CAM', 'TOP-DOWN ARCADE'];
+      this.triggerBanner('CAMERA: ' + camNames[this.cameraMode]);
+    }
+
+    toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        document.getElementById('btn-fullscreen').innerText = '🗗 EXIT FULL';
+      } else {
+        document.exitFullscreen().catch(() => {});
+        document.getElementById('btn-fullscreen').innerText = '⛶ FULLSCREEN';
+      }
+    }
+
+    togglePause() {
+      const menu = document.getElementById('menu-screen');
+      if (this.gameState === 'playing') {
+        this.gameState = 'paused';
+        menu.classList.remove('hidden');
+        document.getElementById('btn-start-game').querySelector('span').innerText = 'RESUME OVERDRIVE';
+        this.loadRecords();
+      } else if (this.gameState === 'paused') {
+        this.gameState = 'playing';
+        menu.classList.add('hidden');
+      }
+    }
+
+    resetCar() {
+      this.car.position.set(0, 0, this.car.position.z);
+      this.car.rotation.set(0, 0, 0);
+      this.speed = 0;
+      this.steerAngle = 0;
+      this.driftAngle = 0;
+      this.isAirborne = false;
+      this.airVelocityY = 0;
+      this.triggerBanner('SYSTEM REBOOTED');
+    }
+
+    toggleAudio() {
+      const active = this.sound.toggleAudio();
+      document.getElementById('btn-audio').innerText = active ? '🔊 AUDIO: ON' : '🔈 AUDIO: OFF';
+    }
+
+    initUI() {
+      document.getElementById('btn-start-game').addEventListener('click', () => {
+        this.sound.init();
+        document.getElementById('menu-screen').classList.add('hidden');
+        this.gameState = 'playing';
+      });
+
+      document.getElementById('btn-pause').addEventListener('click', () => this.togglePause());
+      document.getElementById('btn-cam').addEventListener('click', () => this.cycleCamera());
+      document.getElementById('btn-audio').addEventListener('click', () => this.toggleAudio());
+      document.getElementById('btn-fullscreen').addEventListener('click', () => this.toggleFullscreen());
+
+      const carCards = document.querySelectorAll('.option-card[data-car]');
+      carCards.forEach(card => {
+        card.addEventListener('click', () => {
+          carCards.forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          this.activeCarType = card.dataset.car;
+          this.scene.remove(this.car);
+          this.car = createCarMesh(this.activeCarType);
+          this.scene.add(this.car);
+        });
+      });
+
+      const modeCards = document.querySelectorAll('.option-card[data-mode]');
+      modeCards.forEach(card => {
+        card.addEventListener('click', () => {
+          modeCards.forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          this.gameMode = card.dataset.mode;
+          this.buildTrack();
+        });
+      });
+    }
+
+    // --- DETERMINISTIC 60HZ FIXED TIMESTEP PHYSICS ---
+    updatePhysics(step) {
+      if (this.gameState !== 'playing') return;
+
+      const keys = this.keys;
+
+      // Chrono Slow-Mo
+      const isChronoActive = keys.drift && this.chrono > 5;
+      if (isChronoActive) {
+        this.chrono = Math.max(0, this.chrono - step * 35);
+        this.timeDilation = damp(this.timeDilation, 0.38, 12, step);
+      } else {
+        const rechargeRate = this.activeCarType === 'vortex' ? 32 : 20;
+        this.chrono = Math.min(100, this.chrono + step * rechargeRate);
+        this.timeDilation = damp(this.timeDilation, 1.0, 8, step);
+      }
+
+      const dt = step * this.timeDilation;
+
+      // Nitro
+      const isBoosting = keys.nitro && this.nitro > 5;
+      if (isBoosting) {
+        this.nitro = Math.max(0, this.nitro - dt * 40);
+      } else {
+        this.nitro = Math.min(100, this.nitro + dt * 8);
+      }
+
+      // Max Speed & Acceleration Tuning
+      let baseMax = 65;
+      let accelPower = 24;
+      if (this.activeCarType === 'phantom') { baseMax = 74; accelPower = 28; }
+      else if (this.activeCarType === 'vortex') { baseMax = 64; accelPower = 25; }
+      else if (this.activeCarType === 'titan') { baseMax = 58; accelPower = 22; }
+
+      let accel = 0;
+      if (keys.forward) {
+        accel = isBoosting ? accelPower * 1.7 : accelPower;
+      } else if (keys.backward) {
+        accel = -24;
+      } else {
+        accel = -this.speed * 0.45;
+      }
+
+      this.speed += accel * dt;
+      const curMax = isBoosting ? baseMax * 1.55 : baseMax;
+      this.speed = THREE.MathUtils.clamp(this.speed, -15, curMax);
+
+      const speedRatio = Math.abs(this.speed) / baseMax;
+      this.gear = Math.min(6, Math.max(1, Math.floor(speedRatio * 5.8) + 1));
+      this.rpm = 900 + (speedRatio * 6800) % 1400 + (speedRatio * 1500);
+
+      // Smooth Speedometer and Record Saving
+      const currentMph = Math.floor(Math.abs(this.speed) * 2.237);
+      Records.saveTopSpeed(currentMph);
+
+      // Smooth Steering with Exponential Damping
+      const agility = this.activeCarType === 'vortex' ? 2.8 : (this.activeCarType === 'titan' ? 1.9 : 2.4);
+      const turnRate = agility / (1 + speedRatio * 0.7);
+
+      if (!this.isAirborne) {
+        let steerTarget = 0;
+        if (keys.left) steerTarget = turnRate;
+        else if (keys.right) steerTarget = -turnRate;
+        this.steerAngle = damp(this.steerAngle, steerTarget, 14, dt);
+      }
+
+      // Smooth Progressive Drifting & Tire Smoke
+      const isDrifting = keys.drift && Math.abs(this.speed) > 10 && !this.isAirborne;
+      if (isDrifting) {
+        const driftMultiplier = this.activeCarType === 'vortex' ? 1.5 : 1.0;
+        const driftTarget = -this.steerAngle * 0.85;
+        this.driftAngle = damp(this.driftAngle, driftTarget, 10, dt);
+        this.driftScoreAccum += dt * 650 * this.comboMultiplier * driftMultiplier;
+
+        // Smoke particles without garbage collection
+        const rearZ = this.car.position.z - Math.cos(this.car.rotation.y) * 1.8;
+        const rearX = this.car.position.x - Math.sin(this.car.rotation.y) * 1.8;
+        this.particles.spawn(
+          rearX + (Math.random() - 0.5) * 0.8,
+          0.15,
+          rearZ,
+          (Math.random() - 0.5) * 3,
+          Math.random() * 2 + 1,
+          -this.speed * 0.4,
+          0.85, 0.88, 0.92, 0.5
+        );
+
+        this.sound.setDriftScreech(Math.abs(this.driftAngle) * 2.5);
+      } else {
+        if (this.driftScoreAccum > 200) {
+          const added = Math.floor(this.driftScoreAccum);
+          this.score += added;
+          Records.saveBestScore(this.score);
+          Records.saveBestDrift(added);
+          this.comboMultiplier = Math.min(5.0, this.comboMultiplier + 0.2);
+          this.triggerBanner(`DRIFT COMBO +${added}`);
+          this.driftScoreAccum = 0;
+        }
+        this.driftAngle = damp(this.driftAngle, 0, 12, dt);
+        this.sound.setDriftScreech(0);
+      }
+
+      // Airborne Stunts
+      if (this.isAirborne) {
+        this.airVelocityY -= 32 * dt;
+        this.car.position.y += this.airVelocityY * dt;
+
+        if (keys.left) this.airRoll += 5 * dt;
+        if (keys.right) this.airRoll -= 5 * dt;
+        if (keys.forward) this.airPitch += 4 * dt;
+        if (keys.backward) this.airPitch -= 4 * dt;
+
+        this.car.rotation.z = this.airRoll;
+        this.car.rotation.x = this.airPitch;
+
+        if (this.car.position.y <= 0) {
+          this.car.position.y = 0;
+          this.isAirborne = false;
+          this.airVelocityY = 0;
+          this.sound.playImpact();
+
+          const cleanRoll = Math.abs(this.airRoll % (Math.PI * 2));
+          if (cleanRoll > 2.5 || Math.abs(this.airPitch) > 2.5) {
+            this.score += 1500 * this.comboMultiplier;
+            Records.saveBestScore(this.score);
+            this.nitro = 100;
+            this.triggerBanner('BARREL STUNT LANDED! +1500 & NITRO REFILL!');
+          }
+          this.airRoll = 0;
+          this.airPitch = 0;
+          this.car.rotation.z = 0;
+          this.car.rotation.x = 0;
+        }
+      }
+
+      // Heading & Position
+      const totalHeading = this.car.rotation.y + (this.steerAngle * (this.speed > 0 ? 1 : -1)) * dt;
+      this.car.rotation.y = totalHeading;
+      if (!this.isAirborne) {
+        this.car.rotation.z = damp(this.car.rotation.z, -this.steerAngle * 0.08, 10, dt);
+      }
+
+      const forwardZ = Math.cos(totalHeading + this.driftAngle * 0.5);
+      const forwardX = Math.sin(totalHeading + this.driftAngle * 0.5);
+
+      this.car.position.z += forwardZ * this.speed * dt;
+      this.car.position.x += forwardX * this.speed * dt;
+
+      // Smooth Guardrail Clamping in Highway Mode
+      if (this.gameMode === 'highway') {
+        const roadLimit = 12.0;
+        if (this.car.position.x > roadLimit) {
+          this.car.position.x = roadLimit;
+          this.steerAngle *= -0.5;
+          this.driftAngle *= -0.5;
+          this.speed *= 0.88;
+          this.sound.playImpact();
+        } else if (this.car.position.x < -roadLimit) {
+          this.car.position.x = -roadLimit;
+          this.steerAngle *= -0.5;
+          this.driftAngle *= -0.5;
+          this.speed *= 0.88;
+          this.sound.playImpact();
+        }
+      }
+
+      // Wheel Spin
+      const wheelSpin = (this.speed / 0.42) * dt;
+      this.car.wheels.forEach(w => {
+        w.children[0].rotation.x += wheelSpin;
+        if (w.isFront) w.rotation.y = this.steerAngle * 0.45;
+      });
+
+      if (this.car.steerWheel) {
+        this.car.steerWheel.rotation.z = -this.steerAngle * 1.5;
+      }
+
+      // Nitro Flame Exhaust
+      if (isBoosting) {
+        const rearZ = this.car.position.z - Math.cos(this.car.rotation.y) * 2.25;
+        const rearX = this.car.position.x - Math.sin(this.car.rotation.y) * 2.25;
+        this.particles.spawn(
+          rearX + (Math.random() - 0.5) * 0.4,
+          this.car.position.y + 0.35,
+          rearZ,
+          (Math.random() - 0.5) * 2,
+          Math.random() * 2,
+          -this.speed * 1.3,
+          0.2, 0.6, 1.0, 0.35
+        );
+        this.sound.setNitro(true);
+      } else {
+        this.sound.setNitro(false);
+      }
+
+      // Audio engine update
+      this.sound.updateEngine(
+        (this.rpm - 800) / 7500,
+        keys.forward ? 1.0 : (keys.backward ? 0.5 : 0.1),
+        speedRatio,
+        isChronoActive
+      );
+
+      // --- ZERO-HITCH TRACK RECYCLING (OBJECT POOL RING BUFFER) ---
+      if (this.gameMode === 'highway') {
+        const chunkLen = 60;
+        const poolSize = this.trackChunks.length;
+        const totalSpan = poolSize * chunkLen;
+
+        this.trackChunks.forEach(chunk => {
+          // If chunk is completely behind the car, leap forward to the front
+          if (chunk.position.z + chunkLen < this.car.position.z - 40) {
+            chunk.position.z += totalSpan;
+
+            // Reactivate knocked barrels and collected pickups on this recycled chunk
+            this.obstacles.forEach(obs => {
+              if (obs.chunk === chunk) {
+                obs.mesh.position.y = obs.initialY;
+                obs.active = true;
+              }
+            });
+            this.pickups.forEach(pk => {
+              if (pk.chunk === chunk) {
+                pk.mesh.position.y = pk.initialY;
+                pk.active = true;
+              }
+            });
+          }
+        });
+
+        this.terrain.position.z = this.car.position.z;
+        this.starField.position.z = this.car.position.z;
+      }
+
+      this.updateTrafficAndHazards(dt);
+      this.particles.update(dt);
+    }
+
+    updateTrafficAndHazards(dt) {
+      const carPos = this.car.position;
+      const isOverdrive = this.keys.nitro || this.activeCarType === 'titan';
+      const lanes = [-8, -2.8, 2.8, 8];
+
+      // 1. CIVILIAN TRAFFIC DRONES
+      this.trafficDrones.forEach(drone => {
+        drone.mesh.position.z += drone.speed * dt;
+
+        // If drone is far behind the car, recycle ahead into random lane
+        if (drone.mesh.position.z < carPos.z - 45) {
+          drone.mesh.position.z = carPos.z + 240 + Math.random() * 200;
+          drone.lane = lanes[Math.floor(Math.random() * lanes.length)];
+          drone.mesh.position.x = drone.lane;
+          drone.speed = 18 + Math.random() * 12;
+        }
+
+        // Collision Check
+        const distZ = Math.abs(drone.mesh.position.z - carPos.z);
+        const distX = Math.abs(drone.mesh.position.x - carPos.x);
+
+        if (distZ < 3.2 && distX < 2.0 && carPos.y < 1.5) {
+          this.sound.playImpact();
+          if (isOverdrive) {
+            this.score += 750 * this.comboMultiplier;
+            Records.saveBestScore(this.score);
+            this.triggerBanner('TITAN SMASH! +750');
+            drone.mesh.position.z += 60;
+            for (let p = 0; p < 18; p++) {
+              this.particles.spawn(
+                carPos.x + (Math.random() - 0.5) * 1.5,
+                carPos.y + 0.5,
+                carPos.z + 1.5,
+                (Math.random() - 0.5) * 8,
+                2 + Math.random() * 5,
+                (Math.random() - 0.5) * 8,
+                1.0, 0.6, 0.1, 0.4
+              );
+            }
+          } else {
+            this.speed *= 0.6;
+            this.triggerBanner('COLLISION! -40% SPEED');
+            drone.mesh.position.z += 20;
+            for (let p = 0; p < 12; p++) {
+              this.particles.spawn(
+                carPos.x + (Math.random() - 0.5) * 1.5,
+                carPos.y + 0.5,
+                carPos.z + 1.5,
+                (Math.random() - 0.5) * 6,
+                1 + Math.random() * 4,
+                (Math.random() - 0.5) * 6,
+                0.9, 0.3, 0.1, 0.35
+              );
+            }
+          }
+        }
+      });
+
+      // 2. CONSTRUCTION SAFETY BARRELS (Hazard Obstacles)
+      this.obstacles.forEach(obs => {
+        if (!obs.active || obs.mesh.position.y < -10) return;
+        const worldZ = obs.chunk ? (obs.chunk.position.z + obs.mesh.position.z) : obs.mesh.position.z;
+        const worldX = obs.chunk ? obs.mesh.position.x : obs.mesh.position.x;
+        const distZ = Math.abs(worldZ - carPos.z);
+        const distX = Math.abs(worldX - carPos.x);
+
+        if (distZ < 2.4 && distX < 1.8 && carPos.y < 1.5) {
+          this.sound.playImpact();
+          obs.active = false;
+          obs.mesh.position.y = -50;
+
+          for (let p = 0; p < 16; p++) {
+            this.particles.spawn(
+              worldX + (Math.random() - 0.5) * 1.5,
+              0.6 + Math.random() * 0.8,
+              worldZ + (Math.random() - 0.5) * 1.5,
+              (Math.random() - 0.5) * 7,
+              2 + Math.random() * 6,
+              (Math.random() - 0.5) * 7,
+              1.0, 0.45, 0.05, 0.55
+            );
+          }
+
+          if (isOverdrive) {
+            this.score += 500 * this.comboMultiplier;
+            Records.saveBestScore(this.score);
+            this.triggerBanner('BARRIER SMASHED! +500');
+          } else {
+            this.speed *= 0.65;
+            this.triggerBanner('HAZARD HIT! -35% SPEED');
+          }
+        }
+      });
+
+      // 3. STUNT JUMP RAMPS
+      this.jumpPads.forEach(ramp => {
+        const worldZ = ramp.chunk ? (ramp.chunk.position.z + ramp.mesh.position.z) : ramp.mesh.position.z;
+        const worldX = ramp.chunk ? ramp.mesh.position.x : ramp.mesh.position.x;
+        const halfX = ramp.size ? ramp.size.x * 0.5 : 2.1;
+        const halfZ = ramp.size ? ramp.size.z * 0.5 : 3.5;
+        const distZ = Math.abs(worldZ - carPos.z);
+        const distX = Math.abs(worldX - carPos.x);
+
+        if (distZ < halfZ && distX < halfX && !this.isAirborne && carPos.y < 1.3 && this.speed > 8) {
+          this.isAirborne = true;
+          this.airVelocityY = Math.max(22, this.speed * 0.42);
+          this.sound.playImpact();
+          this.triggerBanner('RAMP LAUNCH! AIR STUNT ACTIVE!');
+
+          for (let p = 0; p < 14; p++) {
+            this.particles.spawn(
+              carPos.x + (Math.random() - 0.5) * 1.5,
+              0.25,
+              carPos.z - 0.5,
+              (Math.random() - 0.5) * 6,
+              2 + Math.random() * 4,
+              -this.speed * 0.4,
+              1.0, 0.85, 0.1, 0.45
+            );
+          }
+        }
+      });
+
+      // 4. NITRO BOOST PICKUPS
+      this.pickups.forEach(pk => {
+        if (pk.mesh.crystal) pk.mesh.crystal.rotation.y += 3.0 * dt;
+        if (pk.mesh.ring) {
+          pk.mesh.ring.rotation.z += 2.0 * dt;
+          pk.mesh.ring.rotation.x = Math.PI / 2 + Math.sin(Date.now() * 0.004) * 0.2;
+        }
+
+        if (!pk.active || pk.mesh.position.y < -10) return;
+        const worldZ = pk.chunk ? (pk.chunk.position.z + pk.mesh.position.z) : pk.mesh.position.z;
+        const worldX = pk.chunk ? pk.mesh.position.x : pk.mesh.position.x;
+        const distZ = Math.abs(worldZ - carPos.z);
+        const distX = Math.abs(worldX - carPos.x);
+
+        if (distZ < 2.4 && distX < 1.8 && Math.abs(carPos.y - 1.0) < 1.8) {
+          pk.active = false;
+          pk.mesh.position.y = -50;
+          this.nitro = 100;
+          this.score += 350 * this.comboMultiplier;
+          Records.saveBestScore(this.score);
+          this.sound.playDimensionShift();
+          this.triggerBanner('NITRO RECHARGE +350!');
+
+          for (let p = 0; p < 18; p++) {
+            const angle = (p / 18) * Math.PI * 2;
+            this.particles.spawn(
+              worldX,
+              1.1,
+              worldZ,
+              Math.cos(angle) * 6,
+              Math.sin(angle) * 4 + 2,
+              Math.sin(angle) * 6,
+              0.0, 1.0, 0.8, 0.5
+            );
+          }
+        }
+      });
+    }
+
+    // --- ZERO-ALLOCATION SMOOTH CAMERA INTERPOLATION ---
+    updateCamera(dt) {
+      const carPos = this.car.position;
+      const carRot = this.car.rotation.y;
+      const speedRatio = Math.abs(this.speed) / 70;
+
+      // Speed lines overlay
+      const speedLines = document.getElementById('speed-lines');
+      speedLines.style.opacity = Math.max(0, (speedRatio - 0.7) * 2.5);
+
+      if (this.cameraMode === 0) {
+        // Chase Cam: Smooth Damped Follow
+        const targetDist = 7.5 + speedRatio * 2.5;
+        const targetHeight = 3.2;
+        const cx = carPos.x - Math.sin(carRot + this.driftAngle * 0.4) * targetDist;
+        const cz = carPos.z - Math.cos(carRot + this.driftAngle * 0.4) * targetDist;
+        const cy = carPos.y + targetHeight;
+
+        _vCamTarget.set(cx, cy, cz);
+        _vLookTarget.set(carPos.x, carPos.y + 1.2, carPos.z + 6);
+
+        this.camera.position.x = damp(this.camera.position.x, _vCamTarget.x, 9, dt);
+        this.camera.position.y = damp(this.camera.position.y, _vCamTarget.y, 9, dt);
+        this.camera.position.z = damp(this.camera.position.z, _vCamTarget.z, 9, dt);
+        this.camera.lookAt(_vLookTarget);
+      } else if (this.cameraMode === 1) {
+        // Low Drift Cam
+        const targetDist = 5.0;
+        const cx = carPos.x - Math.sin(carRot) * targetDist + (this.driftAngle * 2.0);
+        const cz = carPos.z - Math.cos(carRot) * targetDist;
+        const cy = carPos.y + 1.3;
+
+        _vCamTarget.set(cx, cy, cz);
+        _vLookTarget.set(carPos.x, carPos.y + 0.8, carPos.z + 4);
+
+        this.camera.position.x = damp(this.camera.position.x, _vCamTarget.x, 12, dt);
+        this.camera.position.y = damp(this.camera.position.y, _vCamTarget.y, 12, dt);
+        this.camera.position.z = damp(this.camera.position.z, _vCamTarget.z, 12, dt);
+        this.camera.lookAt(_vLookTarget);
+      } else if (this.cameraMode === 2) {
+        // Cockpit Dashboard View
+        const cx = carPos.x - Math.sin(carRot) * 0.15;
+        const cz = carPos.z + Math.cos(carRot) * 0.2;
+        const cy = carPos.y + 0.85;
+
+        this.camera.position.set(cx, cy, cz);
+        _vLookTarget.set(
+          carPos.x + Math.sin(carRot) * 20,
+          carPos.y + 0.75,
+          carPos.z + Math.cos(carRot) * 20
+        );
+        this.camera.lookAt(_vLookTarget);
+      } else if (this.cameraMode === 3) {
+        // Top-Down Arcade Cam
+        this.camera.position.set(carPos.x, carPos.y + 24, carPos.z - 4);
+        _vLookTarget.set(carPos.x, carPos.y, carPos.z + 10);
+        this.camera.lookAt(_vLookTarget);
+      }
+    }
+
+    updateHUD() {
+      const mph = Math.floor(Math.abs(this.speed) * 2.237);
+      document.getElementById('speed-text').innerText = mph;
+      document.getElementById('gear-text').innerText = this.speed < -1 ? 'R' : this.gear;
+
+      const rpmPercent = Math.min(100, Math.floor(((this.rpm - 800) / 7500) * 100));
+      document.getElementById('rpm-fill').style.width = rpmPercent + '%';
+
+      document.getElementById('nitro-bar').style.width = Math.floor(this.nitro) + '%';
+      document.getElementById('nitro-text').innerText = Math.floor(this.nitro) + '%';
+
+      document.getElementById('chrono-bar').style.width = Math.floor(this.chrono) + '%';
+      document.getElementById('chrono-text').innerText = this.chrono < 15 ? 'RECHARGING' : 'READY';
+
+      document.getElementById('score-text').innerText = Math.floor(this.score);
+      document.getElementById('multiplier-text').innerText = this.comboMultiplier.toFixed(1) + 'x MULTI';
+
+      const best = Records.get('best_score', 0);
+      document.getElementById('best-score-text').innerText = Math.max(best, Math.floor(this.score));
+    }
+
+    onResize() {
+      this.camera.aspect = window.innerWidth / window.innerHeight;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // --- MAIN RENDER & PHYSICS LOOP (FIXED TIMESTEP ACCUMULATOR) ---
+    animate() {
+      requestAnimationFrame(() => this.animate());
+
+      const now = performance.now();
+      let dt = (now - this.lastTime) / 1000;
+      this.lastTime = now;
+      if (dt > 0.1) dt = 0.1; // Clamp maximum lag spike
+      this.lag += dt;
+
+      // Execute fixed 60Hz physics steps
+      while (this.lag >= this.FIXED_STEP) {
+        this.updatePhysics(this.FIXED_STEP);
+        this.lag -= this.FIXED_STEP;
+      }
+
+      // Smooth camera interpolation & HUD update
+      this.updateCamera(dt);
+      this.updateHUD();
+
+      // Render 3D Scene
+      this.renderer.render(this.scene, this.camera);
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    new Game();
+  });
+  </script>
+</body>
+</html>
