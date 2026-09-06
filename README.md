@@ -1,9 +1,12 @@
-﻿# 🏎️ OverDrive — Quantum Drift
+# 🏎️ OverDrive — Quantum Drift
 
+[![Play Game](https://img.shields.io/badge/🎮_PLAY_LIVE-ONLINE-00ff66?style=for-the-badge&logo=googlechrome&logoColor=black)](https://mayank-goyal09.github.io/OverDrive/)
 [![WebGL](https://img.shields.io/badge/WebGL-Three.js_r128-00ff66?style=for-the-badge&logo=webgl&logoColor=black)](https://threejs.org/)
 [![FPS](https://img.shields.io/badge/Performance-60%2B_FPS_Locked-00ff66?style=for-the-badge)](https://github.com/mayank-goyal09/OverDrive)
 [![Audio](https://img.shields.io/badge/Web_Audio-Procedural_Synth-00ff66?style=for-the-badge)](https://github.com/mayank-goyal09/OverDrive)
 [![License](https://img.shields.io/badge/License-MIT-00ff66?style=for-the-badge)](LICENSE)
+
+> 🌐 **Live Game URL**: [https://mayank-goyal09.github.io/OverDrive/](https://mayank-goyal09.github.io/OverDrive/)
 
 An adrenaline-fueled, arcade-simulation 3D supercar driving game built with **Three.js** and procedural **Web Audio**. Featuring fixed-timestep 60Hz physics, chrono bullet-time drifting, mid-air stunt acrobatics, highway civilian traffic, hazard obstacles, and a sleek gamer-grade neon HUD.
 
